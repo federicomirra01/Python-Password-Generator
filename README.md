@@ -6,3 +6,7 @@ Features:
 - Character Set: Includes uppercase and lowercase letters, digits, and punctuation symbols.
 - Cryptographic Security: Uses os.urandom() for cryptographically secure random bytes, ensuring high entropy suitable for security applications.
 - Excludes Non-printable Characters: Avoids characters like newline (\n) and carriage return (\r), ensuring the password is fully printable.
+
+Usage:
+python3 passwordGenerator.py [password_length] 
+
