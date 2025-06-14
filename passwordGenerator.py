@@ -1,43 +1,69 @@
 #!/usr/bin/env python3
-
 import os
 import string
 import sys
+import math
 
 def get_random_password(length):
-    # All printable ASCII characters excluding newline and carriage return
-    pool = bytearray()
-    letters = bytes([ch for ch in string.ascii_letters.encode()])  # 10 is \n, 13 is \r
-    digits = bytes([dg for dg in string.digits.encode()])
-    punctation = bytes([pt for pt in string.punctuation.encode()])
+    """Generate a cryptographically secure random password."""
+    # Define character pool
+    chars = string.ascii_letters + string.digits + string.punctuation
+    pool_size = len(chars)
+    
+    # Calculate actual entropy
+    entropy_bits = length * math.log2(pool_size)
+    
+    password = []
+    
+    # Use rejection sampling with proper bounds
+    max_valid = (256 // pool_size) * pool_size  # Largest multiple of pool_size ≤ 256
+    
+    while len(password) < length:
+        # Generate one random byte at a time
+        byte_val = ord(os.urandom(1))
+        
+        # Only use if it's in the unbiased range
+        if byte_val < max_valid:
+            password.append(chars[byte_val % pool_size])
+    
+    return ''.join(password), entropy_bits
 
-    pool.extend(letters)
-    pool.extend(digits)
-    pool.extend(punctation)
-    result = bytearray()
+def get_random_password_efficient(length):
+    """More efficient version using secrets module (Python 3.6+)."""
+    import secrets
+    chars = string.ascii_letters + string.digits + string.punctuation
+    entropy_bits = length * math.log2(len(chars))
     
-    while len(result) < length:
-        # Generate random bytes
-        random_bytes = os.urandom(length)
-        # Filter for printable bytes excluding newline and carriage return
-        result.extend(byte for byte in random_bytes if byte in pool)
-    
-    # Truncate to the desired length
-    result = result[:length]
-    return bytes(result)
+    password = ''.join(secrets.choice(chars) for _ in range(length))
+    return password, entropy_bits
 
 # Usage
-length = 0
-if len(sys.argv) > 1:
-    length = int(sys.argv[1])  # specify the length of the desired string
-    print(length)
-else:
-    length = 16
+def main():
+    length = 16  # default
+    
+    if len(sys.argv) > 1:
+        try:
+            length = int(sys.argv[1])
+            if length <= 0:
+                print("Error: Password length must be positive")
+                sys.exit(1)
+        except ValueError:
+            print("Error: Invalid length argument")
+            sys.exit(1)
+    
+    print(f"Generating password of length {length}")
+    
+    # Use the more efficient version if available
+    try:
+        password, entropy = get_random_password_efficient(length)
+        print(f"Method: secrets.choice() (recommended)")
+    except ImportError:
+        password, entropy = get_random_password(length)
+        print(f"Method: os.urandom() with rejection sampling")
+    
+    print(f"Password: {password}")
+    print(f"Entropy: {entropy:.1f} bits")
+    print(f"Character set size: {len(string.ascii_letters + string.digits + string.punctuation)}")
 
-print(f'New random password of {length * 8} bits:')
-
-random_printable_bytes = get_random_password(length)
-random_printable_string = random_printable_bytes.decode('UTF-8')
-print(random_printable_string)
-
-
+if __name__ == "__main__":
+    main()
